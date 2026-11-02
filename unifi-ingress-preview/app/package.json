@@ -1,0 +1,13 @@
+{
+  "name": "unifi-ingress-preview",
+  "version": "0.0.3",
+  "private": true,
+  "description": "Experimental Ingress bridge for a local UniFi OS console",
+  "dependencies": {
+    "acorn": "8.19.0",
+    "acorn-walk": "8.3.5",
+    "magic-string": "1.4.5"
+  }
+}
+
+

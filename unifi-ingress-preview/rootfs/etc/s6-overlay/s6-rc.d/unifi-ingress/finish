@@ -1,0 +1,2 @@
+#!/command/with-contenv bashio
+exec /run/s6/basedir/bin/halt

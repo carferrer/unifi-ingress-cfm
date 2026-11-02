@@ -1,0 +1,25 @@
+---
+name: UniFi Ingress Preview
+version: "0.0.3"
+slug: unifi-ingress-preview
+description: Puente experimental de Ingress hacia el UCG Ultra local
+arch:
+  - amd64
+  - aarch64
+init: false
+startup: application
+boot: manual
+ingress: true
+ingress_port: 8099
+panel_title: UniFi Preview
+panel_icon: mdi:router-network
+panel_admin: true
+options:
+  router_url: ""
+  certificate_fingerprint: ""
+schema:
+  router_url: str
+  certificate_fingerprint: str
+
+url: https://github.com/carferrer/unifi-ingress-cfm
+
