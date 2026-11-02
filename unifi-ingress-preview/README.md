@@ -1,3 +1,5 @@
+<p align="center"><img src="icon.png" width="128" alt="UniFi Ingress CFM"></p>
+
 # UniFi Ingress Preview
 
 Acceso a una consola UniFi OS local mediante Home Assistant Ingress. Proxy experimental; no instala UniFi Network ni sustituye el router.

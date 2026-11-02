@@ -1,3 +1,5 @@
+<p align="center"><img src="unifi-ingress-preview/icon.png" width="128" alt="UniFi Ingress CFM"></p>
+
 # UniFi Ingress CFM
 
 Add-on experimental para abrir la interfaz de una consola UniFi OS local dentro de Home Assistant mediante Ingress. UniFi continúa ejecutándose en el router.
