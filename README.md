@@ -33,3 +33,16 @@ El proxy usa Node.js, Acorn y Magic String. No incluye ni redistribuye el JavaSc
 
 Las futuras actualizaciones se reciben al subir la versión del add-on en este repositorio. Las actualizaciones de UniFi no se incorporan automáticamente: requieren comprobar la compatibilidad del puente.
 
+
+## Mantenimiento y releases
+
+- **Renovate** propone PR para la imagen base, dependencias npm y acciones de GitHub, sin fusionarlas automáticamente. La aplicación Renovate debe tener acceso a este repositorio. No gestiona actualizaciones de UniFi OS/Network en el router.
+- En **Actions → Preparar release → Run workflow**, introduce una versión mayor con formato YYYY.MM.NN, por ejemplo 2026.11.02. Abre una rama y PR con versión, lockfile y notas generadas desde GitHub.
+- Revisa y fusiona esa PR en main. **Publicar release** valida la versión contra el commit fusionado, construye/prueba amd64 y aarch64, publica el manifiesto y finalmente crea el tag y release.
+- También puedes ejecutar **Publicar release** manualmente para una versión ya preparada en main. Rechaza tags existentes y no modifica la release 2026.11.01.
+- **CI** comprueba PR y cambios de main con builds de ambas arquitecturas sin publicar imágenes.
+- GitHub debe permitir que Actions cree pull requests (Settings → Actions → General → Workflow permissions → Allow GitHub Actions to create and approve pull requests). El flujo no aprueba ni fusiona PR por sí mismo.
+- Las PR creadas con GITHUB_TOKEN pueden no lanzar CI automáticamente. Puedes ejecutar CI manualmente eligiendo la rama release; Publicar release siempre vuelve a construir y probar antes de publicar.
+- Build images es un workflow reutilizable invocado por Publicar release; los cambios ordinarios en main ya no publican versiones.
+
+Referencias: [gestores regex de Renovate](https://docs.renovatebot.com/modules/manager/regex/) y [workflows reutilizables de GitHub](https://docs.github.com/en/actions/how-tos/reuse-automations/reuse-workflows).

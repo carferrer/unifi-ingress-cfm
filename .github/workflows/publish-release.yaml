@@ -1,0 +1,73 @@
+name: Publicar release
+on:
+  pull_request:
+    types: [closed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Versión ya fusionada en main (YYYY.MM.NN)"
+        required: true
+        type: string
+permissions:
+  contents: write
+  packages: write
+concurrency:
+  group: publish-release
+  cancel-in-progress: false
+jobs:
+  validate:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.pull_request.merged == true &&
+       github.event.pull_request.head.repo.full_name == github.repository &&
+       startsWith(github.event.pull_request.head.ref, 'release/'))
+    runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.vars.outputs.version }}
+      target: ${{ steps.vars.outputs.target }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.event.pull_request.merge_commit_sha || 'main' }}
+          fetch-depth: 0
+      - name: Validar versión y commit exacto
+        id: vars
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+          BRANCH: ${{ github.event.pull_request.head.ref }}
+        run: |
+          VERSION="${INPUT_VERSION:-${BRANCH#release/}}"
+          export VERSION
+          node scripts/release.cjs check
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "target=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+      - name: Rechazar tags ya publicados
+        env:
+          VERSION: ${{ steps.vars.outputs.version }}
+        run: |
+          if git ls-remote --exit-code --tags origin "refs/tags/$VERSION" >/dev/null 2>&1; then
+            echo "La versión ya tiene tag; no se sobrescribe"; exit 1
+          fi
+  build:
+    needs: validate
+    uses: ./.github/workflows/builder.yaml
+    with:
+      version: ${{ needs.validate.outputs.version }}
+      target: ${{ needs.validate.outputs.target }}
+    secrets: inherit
+  release:
+    needs: [validate, build]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ needs.validate.outputs.target }}
+      - name: Publicar release
+        env:
+          VERSION: ${{ needs.validate.outputs.version }}
+          TARGET: ${{ needs.validate.outputs.target }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          node scripts/release.cjs check
+          gh release create "$VERSION" --target "$TARGET" --title "UniFi Ingress CFM $VERSION" --notes-file release-notes.md

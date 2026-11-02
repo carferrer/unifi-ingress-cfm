@@ -1,0 +1,50 @@
+name: Preparar release
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Nueva versión YYYY.MM.NN (ejemplo: 2026.11.02)"
+        required: true
+        type: string
+permissions:
+  contents: write
+  pull-requests: write
+concurrency:
+  group: prepare-release
+  cancel-in-progress: false
+jobs:
+  prepare:
+    runs-on: ubuntu-24.04
+    env:
+      VERSION: ${{ inputs.version }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Validar versión y generar notas
+        run: |
+          [[ "$VERSION" =~ ^[0-9]{4}\.[0-9]{2}\.[0-9]{2}$ ]]
+          if git ls-remote --exit-code --heads origin "release/$VERSION" >/dev/null 2>&1; then
+            echo "La rama ya existe"; exit 1
+          fi
+          if git ls-remote --exit-code --tags origin "refs/tags/$VERSION" >/dev/null 2>&1; then
+            echo "El tag ya existe"; exit 1
+          fi
+          gh api --method POST "repos/$GITHUB_REPOSITORY/releases/generate-notes" \
+            -f tag_name="$VERSION" -f target_commitish="$(git rev-parse HEAD)" --jq .body > release-notes.md
+          node scripts/release.cjs prepare
+          node scripts/release.cjs check
+          node --test unifi-ingress-preview/app/cookies.test.cjs
+      - name: Crear rama y PR
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b "release/$VERSION"
+          git add unifi-ingress-preview/config.yaml unifi-ingress-preview/CHANGELOG.md \
+            unifi-ingress-preview/app/package.json unifi-ingress-preview/app/package-lock.json RELEASE_NOTES.md
+          git commit -m "chore: preparar release $VERSION"
+          git push origin "release/$VERSION"
+          gh pr create --base main --head "release/$VERSION" --title "Preparar release $VERSION" \
+            --body "Revisa las notas y los cambios de versión. Al fusionar se construirán amd64 y aarch64; la release se publicará si ambas builds terminan correctamente."

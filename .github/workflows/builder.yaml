@@ -1,0 +1,61 @@
+name: Build images
+on:
+  workflow_call:
+    inputs:
+      version:
+        required: true
+        type: string
+      target:
+        required: true
+        type: string
+permissions:
+  contents: read
+  packages: write
+jobs:
+  build:
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-24.04
+          - arch: aarch64
+            runner: ubuntu-24.04-arm
+    env:
+      VERSION: ${{ inputs.version }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ inputs.target }}
+      - run: node scripts/release.cjs check
+      - name: Login
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: printf '%s' "$GH_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+      - name: Build, test and push
+        env:
+          ARCH: ${{ matrix.arch }}
+        run: |
+          IMAGE="ghcr.io/carferrer/unifi-ingress-cfm-$ARCH:$VERSION"
+          docker build --pull -t "$IMAGE" \
+            --label "org.opencontainers.image.source=https://github.com/carferrer/unifi-ingress-cfm" \
+            --label "org.opencontainers.image.version=$VERSION" \
+            --label "org.opencontainers.image.revision=$(git rev-parse HEAD)" unifi-ingress-preview
+          docker run --rm --entrypoint node "$IMAGE" --test cookies.test.cjs
+          docker push "$IMAGE"
+  manifest:
+    needs: build
+    runs-on: ubuntu-24.04
+    env:
+      VERSION: ${{ inputs.version }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Publish multi-arch manifest
+        run: |
+          printf '%s' "$GH_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+          docker buildx imagetools create -t "ghcr.io/carferrer/unifi-ingress-cfm:$VERSION" \
+            "ghcr.io/carferrer/unifi-ingress-cfm-amd64:$VERSION" \
+            "ghcr.io/carferrer/unifi-ingress-cfm-aarch64:$VERSION"
+          docker buildx imagetools inspect "ghcr.io/carferrer/unifi-ingress-cfm:$VERSION"

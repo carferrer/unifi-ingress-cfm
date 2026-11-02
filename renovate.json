@@ -1,0 +1,31 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended", "helpers:pinGitHubActionDigests"],
+  "rebaseWhen": "behind-base-branch",
+  "timezone": "Europe/Madrid",
+  "dependencyDashboard": true,
+  "labels": ["dependencies"],
+  "commitMessagePrefix": "⬆️",
+  "commitMessageTopic": "{{depName}}",
+  "automerge": false,
+  "enabledManagers": ["npm", "github-actions", "custom.regex"],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "Base image in Dockerfile and both build.yaml architectures",
+      "managerFilePatterns": ["/^unifi-ingress-preview/(Dockerfile|build\\.yaml)$/"],
+      "matchStrings": [
+        "ARG BUILD_FROM=(?<depName>[^\\s]+):(?<currentValue>[^\\s]+)",
+        "(?:aarch64|amd64):\\s+(?<depName>[^\\s]+):(?<currentValue>[^\\s]+)"
+      ],
+      "datasourceTemplate": "docker"
+    }
+  ],
+  "packageRules": [
+    {
+      "matchDatasources": ["docker"],
+      "matchPackageNames": ["ghcr.io/hassio-addons/base"],
+      "groupName": "Home Assistant base image"
+    }
+  ]
+}

@@ -1,0 +1,23 @@
+const {test}=require("node:test");
+const assert=require("node:assert/strict");
+const fs=require("node:fs");
+const os=require("node:os");
+const path=require("node:path");
+const {spawnSync}=require("node:child_process");
+test("prepare/check preserve multiline notes and synchronize npm; reject mismatches",()=>{
+ const root=fs.mkdtempSync(path.join(os.tmpdir(),"unifi-release-"));
+ const app=path.join(root,"unifi-ingress-preview/app");fs.mkdirSync(app,{recursive:true});
+ fs.writeFileSync(path.join(root,"unifi-ingress-preview/config.yaml"),'version: "2026.11.01"\n');
+ fs.writeFileSync(path.join(root,"unifi-ingress-preview/CHANGELOG.md"),"# Changelog\n\n## 2026.11.01\nPrevious\n");
+ for(const file of ["package.json","package-lock.json"])fs.writeFileSync(path.join(app,file),JSON.stringify({version:"2026.11.1",packages:{"":{version:"2026.11.1"}}}));
+ const notes="First paragraph\n\n## Changes\n- A\n- B";
+ fs.writeFileSync(path.join(root,"release-notes.md"),notes);
+ const run=(mode,version)=>spawnSync(process.execPath,[path.join(__dirname,"release.cjs"),mode],{env:{...process.env,RELEASE_ROOT:root,VERSION:version},encoding:"utf8"});
+ assert.notEqual(run("prepare","bad;echo test").status,0);
+ assert.notEqual(run("prepare","2026.11.01").status,0);
+ const prepared=run("prepare","2026.11.02");assert.equal(prepared.status,0,prepared.stderr);
+ assert.equal(JSON.parse(fs.readFileSync(path.join(app,"package-lock.json"))).packages[""].version,"2026.11.2");
+ assert.notEqual(run("check","2026.11.03").status,0);
+ const checked=run("check","2026.11.02");assert.equal(checked.status,0,checked.stderr);
+ assert.equal(fs.readFileSync(path.join(root,"release-notes.md"),"utf8"),notes+"\n");
+});
