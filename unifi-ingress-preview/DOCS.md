@@ -1,4 +1,4 @@
-# UniFi Ingress Preview
+# UniFi Ingress CFM
 
 Acceso a una consola UniFi OS local mediante Home Assistant Ingress. Proxy experimental; no instala UniFi Network ni sustituye el router.
 
@@ -13,7 +13,7 @@ El puente compara la huella antes de enviar las peticiones. No usa la validació
 
 ## Acceso
 
-Abre la interfaz desde el add-on y utiliza tu cuenta local de UniFi. Activa Mostrar en el panel lateral si lo deseas. El panel se llama UniFi Preview.
+Abre la interfaz desde el add-on y utiliza tu cuenta local de UniFi. Activa Mostrar en el panel lateral si lo deseas. El panel se llama UniFi.
 
 No se publican puertos del host. El puerto interno 8099 acepta al proxy Ingress del Supervisor. El router debe ser accesible por HTTPS desde Home Assistant.
 

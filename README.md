@@ -9,7 +9,7 @@ Add-on experimental para abrir la interfaz de una consola UniFi OS local dentro 
 ## Instalación
 
 1. Añade https://github.com/carferrer/unifi-ingress-cfm a los repositorios de la tienda de add-ons.
-2. Instala **UniFi Ingress Preview**. Descarga la imagen precompilada para amd64 o aarch64.
+2. Instala **UniFi Ingress CFM**. Descarga la imagen precompilada para amd64 o aarch64.
 3. Configura la URL HTTPS de tu consola y la huella SHA-256 de su certificado.
 4. Inicia el add-on, pulsa **Abrir interfaz web** e inicia sesión con tu cuenta local de UniFi.
 
@@ -17,7 +17,7 @@ Add-on experimental para abrir la interfaz de una consola UniFi OS local dentro 
 
 ## Estado
 
-Basado en la preview 0.0.2, validada por su usuario con UCG Ultra, UniFi OS 5.1.19 y Network 10.4.57: acceso local, navegación, selector de iconos y reconexión de dispositivos. No implica compatibilidad con todos los modelos, versiones o funciones de UniFi.
+Basado en la versión de pruebas 0.0.2, validada por su usuario con UCG Ultra, UniFi OS 5.1.19 y Network 10.4.57: acceso local, navegación, selector de iconos y reconexión de dispositivos. No implica compatibilidad con todos los modelos, versiones o funciones de UniFi.
 
 Versión 2026.11.01: preparación para distribución, valores de conexión vacíos y documentación. El puente conserva el comportamiento de 0.0.2.
 
