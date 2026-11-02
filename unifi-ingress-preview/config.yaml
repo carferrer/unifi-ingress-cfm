@@ -1,6 +1,6 @@
 ---
 name: UniFi Ingress Preview
-version: "0.0.3"
+version: "2026.11.01"
 slug: unifi-ingress-preview
 description: Puente experimental de Ingress hacia el UCG Ultra local
 arch:
@@ -22,4 +22,6 @@ schema:
   certificate_fingerprint: str
 
 url: https://github.com/carferrer/unifi-ingress-cfm
+
+image: ghcr.io/carferrer/unifi-ingress-cfm
 

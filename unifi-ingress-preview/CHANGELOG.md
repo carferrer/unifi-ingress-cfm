@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026.11.01
+- Numeración por fecha, release e imágenes amd64/aarch64 en GHCR.
+- Home Assistant descarga la imagen precompilada.
+
 ## 0.0.3
 - Preparación del repositorio instalable desde Home Assistant.
 - URL y huella vacías por defecto; sin datos de instalaciones particulares.
@@ -13,3 +17,4 @@
 
 ## 0.0.1
 - Primera prueba del puente Ingress.
+

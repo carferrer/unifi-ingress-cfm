@@ -1,0 +1,73 @@
+name: Build and release
+on:
+  push:
+    branches: [main]
+    paths:
+      - unifi-ingress-preview/**
+      - .github/workflows/release.yaml
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: unifi-release
+  cancel-in-progress: false
+jobs:
+  build:
+    name: Build ${{ matrix.arch }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 25
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-24.04
+          - arch: aarch64
+            runner: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Read version
+        run: |
+          VERSION=$(sed -n 's/^version: "\(.*\)"/\1/p' unifi-ingress-preview/config.yaml)
+          [[ "$VERSION" =~ ^[0-9]{4}\.[0-9]{2}\.[0-9]{2}$ ]]
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+      - name: Authenticate registry
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: printf '%s' "$GH_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+      - name: Build and test image
+        run: |
+          docker build --pull -t "ghcr.io/carferrer/unifi-ingress-cfm-${{ matrix.arch }}:$VERSION" \
+            --label "org.opencontainers.image.source=https://github.com/carferrer/unifi-ingress-cfm" \
+            --label "org.opencontainers.image.version=$VERSION" \
+            --label "org.opencontainers.image.revision=$GITHUB_SHA" unifi-ingress-preview
+          docker run --rm --entrypoint node "ghcr.io/carferrer/unifi-ingress-cfm-${{ matrix.arch }}:$VERSION" --test cookies.test.cjs
+      - name: Push image
+        run: docker push "ghcr.io/carferrer/unifi-ingress-cfm-${{ matrix.arch }}:$VERSION"
+  release:
+    name: Publish manifest and release
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      packages: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Publish manifest and release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION=$(sed -n 's/^version: "\(.*\)"/\1/p' unifi-ingress-preview/config.yaml)
+          printf '%s' "$GH_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+          docker buildx imagetools create -t "ghcr.io/carferrer/unifi-ingress-cfm:$VERSION" \
+            "ghcr.io/carferrer/unifi-ingress-cfm-amd64:$VERSION" \
+            "ghcr.io/carferrer/unifi-ingress-cfm-aarch64:$VERSION"
+          docker buildx imagetools inspect "ghcr.io/carferrer/unifi-ingress-cfm:$VERSION"
+          if ! gh release view "$VERSION" >/dev/null 2>&1; then
+            gh release create "$VERSION" --target "$GITHUB_SHA" --title "UniFi Ingress CFM $VERSION" \
+              --notes-file RELEASE_NOTES.md
+          fi
