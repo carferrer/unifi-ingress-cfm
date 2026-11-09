@@ -1,4 +1,4 @@
-ARG BUILD_FROM=ghcr.io/hassio-addons/base:21.0.10
+ARG BUILD_FROM=ghcr.io/hassio-addons/base:21.0.11
 FROM ${BUILD_FROM}
 WORKDIR /opt/unifi-ingress
 RUN apk add --no-cache nodejs npm
