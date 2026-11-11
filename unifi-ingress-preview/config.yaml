@@ -1,6 +1,6 @@
 ---
 name: UniFi Ingress CFM
-version: "2026.11.02"
+version: "2026.11.03"
 slug: unifi-ingress-preview
 description: Puente experimental de Ingress hacia el UCG Ultra local
 arch:

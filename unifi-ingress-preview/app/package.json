@@ -1,6 +1,6 @@
 {
   "name": "unifi-ingress-preview",
-  "version": "2026.11.2",
+  "version": "2026.11.3",
   "private": true,
   "description": "Experimental Ingress bridge for a local UniFi OS console",
   "dependencies": {
