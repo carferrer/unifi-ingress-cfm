@@ -58,6 +58,7 @@ test("auto-login uses the pinned upstream and scopes cookies without exposing cr
         assert.equal(blocked.statusCode, 429);
         assert.equal(requests.length, 2);
     } finally {
+        server.closeAllConnections();
         await new Promise(resolve => server.close(resolve));
         https.request = originalRequest;
         for (const key of ["DEV_HARNESS", "PORT", "UNIFI_URL", "UNIFI_PIN", "UNIFI_USERNAME", "UNIFI_PASSWORD"]) {
