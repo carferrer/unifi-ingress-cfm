@@ -11,7 +11,8 @@ jobs:
     runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-      - run: node --test scripts/release.test.cjs unifi-ingress-preview/app/cookies.test.cjs
+      - run: npm ci --prefix unifi-ingress-preview/app --no-audit --no-fund
+      - run: node --test scripts/release.test.cjs unifi-ingress-preview/app/cookies.test.cjs unifi-ingress-preview/app/autologin.test.cjs
   build:
     runs-on: ${{ matrix.runner }}
     strategy:
@@ -21,4 +22,4 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       - run: docker build --pull -t unifi-ci unifi-ingress-preview
-      - run: docker run --rm --entrypoint node unifi-ci --test cookies.test.cjs
+      - run: docker run --rm --entrypoint node unifi-ci --test cookies.test.cjs autologin.test.cjs
