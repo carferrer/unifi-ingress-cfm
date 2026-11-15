@@ -10,13 +10,13 @@ Acceso a una consola UniFi OS local mediante Home Assistant Ingress. Proxy exper
 - **certificate_fingerprint**: huella SHA-256 del certificado que presenta esa consola. Se admiten caracteres hexadecimales con o sin dos puntos.
 - **local_username** y **local_password**: cuenta local de UniFi para iniciar sesión automáticamente. Déjalos vacíos para usar el acceso manual.
 
-Ambos valores son obligatorios. Obtén la huella desde el visor del certificado del navegador al abrir directamente tu consola, comprobando que se trata de tu equipo. No uses la huella del certificado de Home Assistant.
+La URL y la huella son obligatorias; las credenciales locales son opcionales. Obtén la huella desde el visor del certificado del navegador al abrir directamente tu consola, comprobando que se trata de tu equipo. No uses la huella del certificado de Home Assistant.
 
 El puente compara la huella antes de enviar las peticiones. No usa la validación convencional de autoridades certificadoras: confía en el certificado exacto fijado por su SHA-256. Si el certificado cambia, hay que verificar el nuevo y actualizar la huella.
 
 ## Acceso
 
-Abre la interfaz desde el add-on. Con las credenciales opcionales configuradas, el puente renueva la sesión cuando UniFi devuelve un error de autenticación y recarga la interfaz. Si UniFi rechaza el acceso, espera dos minutos antes de otro intento automático; puedes iniciar sesión manualmente mientras tanto. Activa Mostrar en el panel lateral si lo deseas. El panel se llama UniFi.
+Abre la interfaz desde el add-on. Con las credenciales opcionales configuradas, el puente inicia sesión al abrir el panel y vuelve a hacerlo cuando caduca la sesión. Evita repetir el acceso durante 30 segundos tras un intento y, si UniFi lo rechaza, espera dos minutos antes de intentarlo de nuevo. Puedes iniciar sesión manualmente mientras tanto. Este comportamiento se ha confirmado en un UCG Ultra con la versión 2026.11.05. Activa Mostrar en el panel lateral si lo deseas. El panel se llama UniFi.
 
 No se publican puertos del host. El puerto interno 8099 acepta al proxy Ingress del Supervisor. El router debe ser accesible por HTTPS desde Home Assistant.
 
@@ -28,7 +28,7 @@ Desactiva los service workers de UniFi y retira CSP de las respuestas proxificad
 
 Las asignaciones CSS directas como style.backgroundImage no se adaptan completamente. No se garantiza compatibilidad con todas las funciones de UniFi, aplicaciones distintas de Network, autenticación cloud ni futuras versiones.
 
-Los errores 401 antes de iniciar sesión pueden ser normales. Para investigar acciones que no responden, revisa Consola en el navegador: el prefijo [UniFi Ingress] identifica el diagnóstico de tareas internas. Oculta contraseñas, tokens y cookies antes de compartir registros.
+Si el inicio automático falla, la consola del navegador muestra `[UniFi Ingress] Inicio automático rechazado: HTTP ...` sin credenciales. Los errores 401 antes de iniciar sesión pueden ser normales. Para investigar acciones que no responden, revisa Consola en el navegador: el prefijo [UniFi Ingress] identifica el diagnóstico de tareas internas. Oculta contraseñas, tokens y cookies antes de compartir registros.
 
 ## Actualización y retirada
 
