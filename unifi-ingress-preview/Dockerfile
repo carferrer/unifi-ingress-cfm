@@ -7,5 +7,5 @@ RUN npm ci --omit=dev --no-audit --no-fund && npm cache clean --force
 COPY app/ ./
 COPY rootfs/ /
 RUN chmod +x /etc/s6-overlay/s6-rc.d/unifi-ingress/run /etc/s6-overlay/s6-rc.d/unifi-ingress/finish \
-    && node --check proxy.cjs && node --check shim.js && node --check transform.cjs && node --test cookies.test.cjs autologin.test.cjs
+    && node --check proxy.cjs && node --check shim.js && node --check transform.cjs && node --check autologin.cjs && node --test cookies.test.cjs autologin.test.cjs
 
