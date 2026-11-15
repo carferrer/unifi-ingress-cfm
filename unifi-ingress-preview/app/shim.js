@@ -62,15 +62,38 @@
         history[method] = (state, unused, url) => original(state, unused, url == null ? url : adapt(url));
     }
     const fetchOriginal = window.fetch.bind(window);
+    let renewing = false;
+    const renewSession = async () => {
+        if (renewing || Date.now() - Number(sessionStorage.getItem("unifi-ingress-login-at") || 0) < 120000) return;
+        renewing = true;
+        sessionStorage.setItem("unifi-ingress-login-at", String(Date.now()));
+        try {
+            const response = await fetchOriginal(prefix + "/__unifi_autologin", {
+                method: "POST", credentials: "same-origin", cache: "no-store"
+            });
+            if (response.status === 204) actual.replace(prefix + "/");
+        } catch { /* Keep the normal UniFi login screen available. */ }
+        finally { renewing = false; }
+    };
+    if (strip(actual.pathname) === "/login") queueMicrotask(renewSession);
     window.fetch = async (input, init) => {
+        let response;
         if (input instanceof Request) {
             const body = input.body && !(init && "body" in init) ? await input.clone().arrayBuffer() : undefined;
-            return fetchOriginal(new Request(adapt(input.url), input), { ...(body === undefined ? {} : { body }), ...init });
+            response = await fetchOriginal(new Request(adapt(input.url), input), { ...(body === undefined ? {} : { body }), ...init });
+        } else {
+            response = await fetchOriginal(adapt(input), init);
         }
-        return fetchOriginal(adapt(input), init);
+        if (response.status === 401) queueMicrotask(renewSession);
+        return response;
     };
     const open = XMLHttpRequest.prototype.open;
     XMLHttpRequest.prototype.open = function(method, url, ...rest) { return open.call(this, method, adapt(url), ...rest); };
+    const send = XMLHttpRequest.prototype.send;
+    XMLHttpRequest.prototype.send = function(...args) {
+        this.addEventListener("load", () => { if (this.status === 401) renewSession(); }, { once: true });
+        return send.apply(this, args);
+    };
     const socket = window.WebSocket;
     window.WebSocket = class extends socket {
         constructor(url, protocols) {

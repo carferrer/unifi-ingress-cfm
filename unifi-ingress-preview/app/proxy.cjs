@@ -7,6 +7,10 @@ const { transformScript } = require("./transform.cjs");
 const { requestCookies, responseCookie } = require("./cookies.cjs");
 const target = new URL(process.env.UNIFI_URL);
 const pin = (process.env.UNIFI_PIN || "").trim().replaceAll(":", "").toUpperCase();
+const username = process.env.UNIFI_USERNAME || "";
+const password = process.env.UNIFI_PASSWORD || "";
+const autoLoginEnabled = Boolean(username && password);
+let loginBlockedUntil = 0;
 if (target.protocol !== "https:" || target.username || target.password || !/^[A-F0-9]{64}$/.test(pin)) throw new Error("Invalid target or certificate fingerprint");
 const dev = process.env.DEV_HARNESS === "1";
 const fixedPrefix = "/api/hassio_ingress/Unifi_Test123";
@@ -34,6 +38,11 @@ function headersFor(req) {
     const headers = { ...req.headers, host: target.host, "accept-encoding": "identity" };
     for (const name of ["x-ingress-path", "x-forwarded-for", "x-forwarded-host", "x-forwarded-proto", "authorization", "if-none-match", "if-modified-since"]) delete headers[name];
     headers.cookie = requestCookies(headers.cookie);
+    const csrf = /(?:^|;\s*)__unifi_bridge_csrf=([^;]+)/.exec(req.headers.cookie || "")?.[1];
+    if (csrf) {
+        try { headers["x-csrf-token"] = decodeURIComponent(csrf); }
+        catch { /* Ignore malformed browser cookies. */ }
+    }
     if (headers.origin) headers.origin = target.origin;
     if (headers.referer) {
         const referer = new URL(headers.referer);
@@ -41,10 +50,46 @@ function headersFor(req) {
     }
     return headers;
 }
+function login(res, prefix) {
+    if (!autoLoginEnabled) { res.writeHead(404); res.end(); return; }
+    if (Date.now() < loginBlockedUntil) { res.writeHead(429); res.end("Login temporarily paused"); return; }
+    const body = JSON.stringify({ username, password, remember: true });
+    const upstream = https.request({
+        hostname: target.hostname, port: target.port || 443, path: "/api/auth/login",
+        method: "POST", agent, headers: {
+            host: target.host, origin: target.origin, referer: target.origin + "/login",
+            "content-type": "application/json", "content-length": Buffer.byteLength(body),
+        },
+    }, response => {
+        const cookies = response.headers["set-cookie"] || [];
+        // A successful status without session cookies cannot authenticate the browser.
+        if (![200, 204].includes(response.statusCode) || !cookies.length) {
+            loginBlockedUntil = Date.now() + 120000;
+            res.writeHead(response.statusCode === 429 ? 429 : 401);
+            response.resume(); res.end("UniFi login was rejected"); return;
+        }
+        const scoped = cookies.map(cookie => responseCookie(cookie, prefix));
+        const csrf = response.headers["x-csrf-token"];
+        if (typeof csrf === "string" && csrf) {
+            scoped.push("__unifi_bridge_csrf=" + encodeURIComponent(csrf) +
+                "; Path=" + prefix + "/; HttpOnly; Secure; SameSite=Strict");
+        }
+        response.resume();
+        res.writeHead(204, { "set-cookie": scoped, "cache-control": "no-store" });
+        res.end();
+    });
+    upstream.on("error", () => { loginBlockedUntil = Date.now() + 120000; res.writeHead(502); res.end("UniFi login unavailable"); });
+    upstream.setTimeout(15000, () => upstream.destroy(new Error("Login timeout")));
+    upstream.end(body);
+}
 const server = http.createServer((req, res) => {
     if (dev && req.url === "/harness") { res.setHeader("Content-Type", "text/html"); res.end(`<iframe style="width:100%;height:95vh;border:0" src="${fixedPrefix}/"></iframe>`); return; }
     const request = info(req);
     if (!request || !request.upstreamPath.startsWith("/") || request.upstreamPath.startsWith("//")) { res.writeHead(403); res.end("Forbidden"); return; }
+    if (request.upstreamPath === "/__unifi_autologin") {
+        if (req.method !== "POST") { res.writeHead(405); res.end(); return; }
+        login(res, request.prefix); return;
+    }
     if (request.upstreamPath === "/__ingress_bridge.js") { res.writeHead(200, { "Content-Type": "application/javascript", "Cache-Control": "no-store" }); res.end(shim); return; }
     const upstream = https.request({ hostname: target.hostname, port: target.port || 443, path: request.upstreamPath, method: req.method, headers: headersFor(req), agent }, response => {
         const headers = { ...response.headers };

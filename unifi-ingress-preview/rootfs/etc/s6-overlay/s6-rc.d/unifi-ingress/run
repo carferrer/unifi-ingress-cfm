@@ -1,6 +1,8 @@
 #!/command/with-contenv bashio
 export UNIFI_URL="$(bashio::config 'router_url')"
 export UNIFI_PIN="$(bashio::config 'certificate_fingerprint')"
+export UNIFI_USERNAME="$(bashio::config 'local_username')"
+export UNIFI_PASSWORD="$(bashio::config 'local_password')"
 export PORT=8099
 cd /opt/unifi-ingress || exit 1
 exec node proxy.cjs
