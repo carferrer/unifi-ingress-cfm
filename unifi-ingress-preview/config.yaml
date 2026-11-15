@@ -17,9 +17,13 @@ panel_admin: true
 options:
   router_url: ""
   certificate_fingerprint: ""
+  local_username: ""
+  local_password: ""
 schema:
   router_url: str
   certificate_fingerprint: str
+  local_username: str?
+  local_password: password
 
 url: https://github.com/carferrer/unifi-ingress-cfm
 
