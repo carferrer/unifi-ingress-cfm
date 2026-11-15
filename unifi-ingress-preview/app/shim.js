@@ -64,18 +64,30 @@
     const fetchOriginal = window.fetch.bind(window);
     let renewing = false;
     const renewSession = async () => {
-        if (renewing || Date.now() - Number(sessionStorage.getItem("unifi-ingress-login-at") || 0) < 120000) return;
+        const now = Date.now();
+        if (renewing || now - Number(sessionStorage.getItem("unifi-ingress-login-failed-at") || 0) < 120000
+            || now - Number(sessionStorage.getItem("unifi-ingress-login-at") || 0) < 30000) return;
         renewing = true;
-        sessionStorage.setItem("unifi-ingress-login-at", String(Date.now()));
+        sessionStorage.setItem("unifi-ingress-login-at", String(now));
         try {
             const response = await fetchOriginal(prefix + "/__unifi_autologin", {
                 method: "POST", credentials: "same-origin", cache: "no-store"
             });
-            if (response.status === 204) actual.replace(prefix + "/");
-        } catch { /* Keep the normal UniFi login screen available. */ }
+            if (response.status === 204) {
+                sessionStorage.removeItem("unifi-ingress-login-failed-at");
+                actual.replace(prefix + "/");
+            } else if (response.status !== 404) {
+                sessionStorage.setItem("unifi-ingress-login-failed-at", String(Date.now()));
+                console.warn("[UniFi Ingress] Inicio automático rechazado: HTTP " + response.status);
+            }
+        } catch {
+            sessionStorage.setItem("unifi-ingress-login-failed-at", String(Date.now()));
+            console.warn("[UniFi Ingress] No se pudo renovar la sesión");
+        }
         finally { renewing = false; }
     };
-    if (strip(actual.pathname) === "/login") queueMicrotask(renewSession);
+    // UniFi can render its login view at "/" without returning HTTP 401.
+    queueMicrotask(renewSession);
     window.fetch = async (input, init) => {
         let response;
         if (input instanceof Request) {
